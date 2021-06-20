@@ -11,7 +11,7 @@ class Blockchain(object):
         self.file = []
 
         # the genesis (very first) block in the chain
-        self.new_block(previous_hash='1', proof=2)
+        self._new_block(proof=2, previous_hash='1')
 
     def __len__(self):
         return len(self.chain)
@@ -38,7 +38,7 @@ class Blockchain(object):
         new_blockchain.chain = other_chain
         return new_blockchain
 
-    def new_block(self, proof: int, previous_hash=None) -> dict:
+    def _new_block(self, proof: int, previous_hash=None) -> dict:
         """
         Create a new block in the blockchain which holds a slice of data
 
@@ -52,7 +52,7 @@ class Blockchain(object):
             'timestamp': time(),
             'file': self.file,
             'proof': proof,
-            'previous_hash': previous_hash or self.hash(self.chain[-1])
+            'previous_hash': previous_hash or self._hash(self.chain[-1])
         }
 
         # reset the current file slice
@@ -60,25 +60,19 @@ class Blockchain(object):
         self.chain.append(block)
         return block
 
-    def new_transaction(self, values: dict) -> int:
+    def new_transaction(self, **kwargs) -> int:
         """
-        Creates a new transaction to go into the next mined Block
+        Creates a new transaction to go into the next mined block.
 
-        :param values: <dict> Dictionary containing listed parameters:
-
-        - author_id: Node ID of the sender
-        - file: The hash of the file being sent. This way, the file doesn't need to be stored in the block but it still can not be altered
-        - recipient_node: Node ID of the recipient
-        - path: The path where the file will get stored (adding it to the blockchain disallows the owner to move the file)
-        - transaction_id:  ID of the transaction
-        :return: <int> The index of the block that will hold this transaction
+        :param kwargs: <dict> Dictionary containing parameters.
+        :return: <int> The index of the block that will hold this transaction.
         """
 
-        self.file.append(values)
+        self.file.append(kwargs)
 
         return self.last_block['index'] + 1
 
-    def proof_of_work(self, last_proof: int) -> int:
+    def _proof_of_work(self, last_proof: int) -> int:
         """
         Simple proof of work algorithm:
          - find a number p' such that hash(pp') contains leading 4 zeroes, where p is the previous p'
@@ -89,7 +83,7 @@ class Blockchain(object):
         """
 
         proof = 0
-        while not self.valid_proof(last_proof, proof):
+        while not self._valid_proof(last_proof, proof):
             proof += 1
 
         return proof
@@ -108,11 +102,11 @@ class Blockchain(object):
             block = self.chain[current_index]
             # check that the hash of the block is correct
 
-            if block['previous_hash'] != self.hash(last_block):
+            if block['previous_hash'] != self._hash(last_block):
                 return False
 
             # check that the proof of work is correct
-            if not self.valid_proof(last_block['proof'], block['proof']):
+            if not self._valid_proof(last_block['proof'], block['proof']):
                 return False
 
             last_block = block
@@ -129,12 +123,12 @@ class Blockchain(object):
         """
 
         last_block = self.last_block
-        proof = self.proof_of_work(last_block['proof'])
+        proof = self._proof_of_work(last_block['proof'])
         # add the new block to the chain if the proof is true
-        if self.valid_proof(last_block['proof'], proof):
+        if self._valid_proof(last_block['proof'], proof):
 
-            prev_hash = self.hash(last_block)
-            block = self.new_block(proof, prev_hash)
+            prev_hash = self._hash(last_block)
+            block = self._new_block(proof, prev_hash)
             if miner:
                 self.new_transaction({'This block has been proudly mined by': miner})
             return True, block
@@ -152,7 +146,7 @@ class Blockchain(object):
         }
 
     @staticmethod
-    def hash(block: dict) -> str:
+    def _hash(block: dict) -> str:
         """
         Creates a SHA-256 hash of a block
 
@@ -164,7 +158,7 @@ class Blockchain(object):
         return hashlib.sha256(block_string).hexdigest()
 
     @staticmethod
-    def valid_proof(last_proof: int, proof: int) -> bool:
+    def _valid_proof(last_proof: int, proof: int) -> bool:
         """
         Validates the proof: does hash(last_proof, proof) contain 4 trailing zeroes?
 
